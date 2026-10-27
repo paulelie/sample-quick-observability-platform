@@ -390,6 +390,15 @@ class PipelineStack(Stack):
                 ]
             )
         )
+        # Firehose streams use SSE with a customer-managed key, so the
+        # PutRecord caller must be allowed to use the key as well.
+        cloudwatch_logs_role.add_to_policy(
+            iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=["kms:GenerateDataKey", "kms:Decrypt"],
+                resources=[self.data_lake_key.key_arn]
+            )
+        )
 
         # ====================================================================
         # EventBridge Rule for CloudTrail Events
@@ -412,6 +421,14 @@ class PipelineStack(Stack):
                     "firehose:PutRecordBatch"
                 ],
                 resources=[cloudtrail_firehose.attr_arn]
+            )
+        )
+        # Required for PutRecord on a CMK-encrypted Firehose stream
+        eventbridge_role.add_to_policy(
+            iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=["kms:GenerateDataKey", "kms:Decrypt"],
+                resources=[self.data_lake_key.key_arn]
             )
         )
         
